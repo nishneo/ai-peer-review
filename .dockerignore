@@ -1,0 +1,32 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+.venv
+venv
+.env
+
+# Frontend (deployed separately)
+frontend/
+node_modules/
+
+# Data and docs
+data/
+docs/
+*.md
+!requirements.txt
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+

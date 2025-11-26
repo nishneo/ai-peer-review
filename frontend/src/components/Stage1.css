@@ -1,0 +1,65 @@
+.stage {
+  margin: 24px 0;
+  padding: 20px;
+  background: var(--stage1-bg);
+  border-radius: 12px;
+  border: 1px solid var(--stage1-border);
+}
+
+.stage-title {
+  margin: 0 0 16px 0;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.tab {
+  padding: 8px 16px;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 8px 8px 0 0;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+}
+
+.tab.active {
+  background: white;
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  border-bottom-color: white;
+  font-weight: 600;
+}
+
+.tab-content {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.model-name {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-bottom: 12px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.response-text {
+  color: var(--text-primary);
+  line-height: 1.6;
+}

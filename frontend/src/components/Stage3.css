@@ -1,0 +1,25 @@
+.stage3 {
+  background: var(--stage3-bg);
+  border-color: var(--stage3-border);
+}
+
+.final-response {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  border: 1px solid var(--stage3-border);
+}
+
+.synthesizer-label {
+  color: #059669;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.final-text {
+  color: var(--text-primary);
+  line-height: 1.7;
+  font-size: 15px;
+}
