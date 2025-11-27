@@ -15,7 +15,15 @@ async def stage1_collect_responses(user_query: str) -> Tuple[List[Dict[str, Any]
     Returns:
         Tuple of (results list, errors list)
     """
-    messages = [{"role": "user", "content": user_query}]
+    # System prompt for concise responses
+    system_prompt = """You are a helpful AI assistant. Provide clear, concise, and accurate responses.
+Keep your answers brief and to the point - aim for 2-4 paragraphs maximum unless the question requires more detail.
+Focus on the most important information and avoid unnecessary elaboration."""
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_query}
+    ]
 
     # Query all models in parallel
     responses, errors = await query_models_parallel(COUNCIL_MODELS, messages)
@@ -64,36 +72,23 @@ async def stage2_collect_rankings(
         for label, result in zip(labels, stage1_results)
     ])
 
-    ranking_prompt = f"""You are evaluating different responses to the following question:
-
-Question: {user_query}
-
-Here are the responses from different models (anonymized):
+    ranking_prompt = f"""Evaluate these responses to: "{user_query}"
 
 {responses_text}
 
-Your task:
-1. First, evaluate each response individually. For each response, explain what it does well and what it does poorly.
-2. Then, at the very end of your response, provide a final ranking.
+Instructions:
+1. Write ONE brief sentence per response (what's good/bad)
+2. End with FINAL RANKING: followed by numbered list (best to worst)
 
-IMPORTANT: Your final ranking MUST be formatted EXACTLY as follows:
-- Start with the line "FINAL RANKING:" (all caps, with colon)
-- Then list the responses from best to worst as a numbered list
-- Each line should be: number, period, space, then ONLY the response label (e.g., "1. Response A")
-- Do not add any other text or explanations in the ranking section
-
-Example of the correct format for your ENTIRE response:
-
-Response A provides good detail on X but misses Y...
-Response B is accurate but lacks depth on Z...
-Response C offers the most comprehensive answer...
+Example format:
+Response A: Good accuracy but verbose.
+Response B: Concise and clear.
 
 FINAL RANKING:
-1. Response C
+1. Response B
 2. Response A
-3. Response B
 
-Now provide your evaluation and ranking:"""
+Your evaluation:"""
 
     messages = [{"role": "user", "content": ranking_prompt}]
 
@@ -145,22 +140,22 @@ async def stage3_synthesize_final(
         for result in stage2_results
     ])
 
-    chairman_prompt = f"""You are the Synthesizer for AI Peer Review. Multiple AI models have provided responses to a user's question, and then ranked each other's responses.
+    chairman_prompt = f"""Synthesize the best answer from these AI responses.
 
-Original Question: {user_query}
+Question: {user_query}
 
-STAGE 1 - Individual Responses:
+Responses:
 {stage1_text}
 
-STAGE 2 - Peer Rankings:
+Rankings:
 {stage2_text}
 
-Your task as Synthesizer is to compile all of this information into a single, comprehensive, accurate answer to the user's original question. Consider:
-- The individual responses and their insights
-- The peer rankings and what they reveal about response quality
-- Any patterns of agreement or disagreement
+IMPORTANT: Provide a CONCISE final answer (3-5 paragraphs max). Focus on:
+- Key points where models agreed
+- The most accurate information from top-ranked responses
+- Direct, actionable answer to the user's question
 
-Provide a clear, well-reasoned final answer that represents the panel's collective wisdom:"""
+Do NOT repeat what each model said. Just give the best synthesized answer:"""
 
     messages = [{"role": "user", "content": chairman_prompt}]
 

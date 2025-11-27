@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import './Sidebar.css';
 
 export default function Sidebar({
@@ -6,9 +5,10 @@ export default function Sidebar({
   currentConversationId,
   onSelectConversation,
   onNewConversation,
+  isOpen,
 }) {
   return (
-    <div className="sidebar">
+    <div className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
         <div className="logo">
           <span className="logo-icon">◎</span>
@@ -16,7 +16,7 @@ export default function Sidebar({
         </div>
         <p className="tagline">Multi-Model Validation</p>
         <button className="new-conversation-btn" onClick={onNewConversation}>
-          + New Session
+          + New Chat
         </button>
       </div>
 
@@ -33,7 +33,7 @@ export default function Sidebar({
               onClick={() => onSelectConversation(conv.id)}
             >
               <div className="conversation-title">
-                {conv.title || 'New Session'}
+                {conv.title || 'New Chat'}
               </div>
               <div className="conversation-meta">
                 {conv.message_count} messages

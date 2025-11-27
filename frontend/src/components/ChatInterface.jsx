@@ -141,7 +141,7 @@ export default function ChatInterface({
                       <span>Stage 3: Synthesizing final answer...</span>
                     </div>
                   )}
-                  {msg.stage3 && <Stage3 finalResponse={msg.stage3} />}
+                  {msg.stage3 && <Stage3 finalResponse={msg.stage3} aggregateRankings={msg.metadata?.aggregate_rankings} />}
                 </div>
               )}
             </div>
