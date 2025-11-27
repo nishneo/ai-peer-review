@@ -312,3 +312,98 @@
   background: var(--text-muted);
   box-shadow: none;
 }
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .chat-interface {
+    padding-top: 60px; /* Space for mobile menu button */
+  }
+
+  .messages-container {
+    padding: 16px;
+  }
+
+  .error-banner {
+    margin: 8px 16px 0;
+    padding: 12px 16px;
+  }
+
+  .empty-state {
+    padding: 24px 16px;
+  }
+
+  .empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+
+  .empty-state h2 {
+    font-size: 22px;
+  }
+
+  .empty-state p {
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+
+  .features {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .feature {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  .user-message .message-content {
+    max-width: 95%;
+    padding: 12px;
+  }
+
+  .input-form {
+    padding: 16px;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .message-input {
+    min-height: 60px;
+    padding: 12px 14px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .send-button {
+    width: 100%;
+    padding: 14px;
+    align-self: stretch;
+  }
+
+  .stage-loading {
+    padding: 12px;
+    font-size: 13px;
+  }
+
+  .message-group {
+    margin-bottom: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .empty-state h2 {
+    font-size: 20px;
+  }
+
+  .empty-state p {
+    font-size: 13px;
+  }
+
+  .error-banner {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .error-dismiss {
+    align-self: flex-end;
+  }
+}
