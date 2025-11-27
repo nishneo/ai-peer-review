@@ -6,6 +6,103 @@
   background: var(--bg-primary);
 }
 
+/* Error Banner Styles */
+.error-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px 20px;
+  margin: 16px 32px 0;
+  border-radius: 12px;
+  animation: slideDown 0.3s ease-out;
+  gap: 12px;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.error-default {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid #f59e0b;
+  color: #92400e;
+}
+
+.error-warning {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border: 1px solid #ea580c;
+  color: #9a3412;
+}
+
+.error-server {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border: 1px solid #ef4444;
+  color: #991b1b;
+}
+
+.error-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+}
+
+.error-icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.error-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.error-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+.error-message {
+  font-size: 14px;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.error-retry {
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.8;
+  margin-top: 4px;
+}
+
+.error-dismiss {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+  color: inherit;
+  line-height: 1;
+}
+
+.error-dismiss:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.1);
+}
+
 .messages-container {
   flex: 1;
   overflow-y: auto;

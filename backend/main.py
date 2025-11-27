@@ -149,16 +149,35 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             if is_first_message:
                 title_task = asyncio.create_task(generate_conversation_title(request.content))
 
+            all_errors = []
+
             # Stage 1: Collect responses
             yield f"data: {json.dumps({'type': 'stage1_start'})}\n\n"
-            stage1_results = await stage1_collect_responses(request.content)
-            yield f"data: {json.dumps({'type': 'stage1_complete', 'data': stage1_results})}\n\n"
+            stage1_results, stage1_errors = await stage1_collect_responses(request.content)
+            all_errors.extend(stage1_errors)
+            
+            # Send stage1 complete with any errors
+            yield f"data: {json.dumps({'type': 'stage1_complete', 'data': stage1_results, 'errors': stage1_errors})}\n\n"
+            
+            # If we have errors, send them to frontend
+            if stage1_errors:
+                yield f"data: {json.dumps({'type': 'model_errors', 'errors': stage1_errors, 'stage': 1})}\n\n"
+
+            # If no models responded, send error and stop
+            if not stage1_results:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'All models failed to respond. Please try again.', 'status': 503, 'title': 'Service Unavailable', 'icon': '🔄', 'errors': all_errors})}\n\n"
+                return
 
             # Stage 2: Collect rankings
             yield f"data: {json.dumps({'type': 'stage2_start'})}\n\n"
-            stage2_results, label_to_model = await stage2_collect_rankings(request.content, stage1_results)
+            stage2_results, label_to_model, stage2_errors = await stage2_collect_rankings(request.content, stage1_results)
+            all_errors.extend(stage2_errors)
             aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
-            yield f"data: {json.dumps({'type': 'stage2_complete', 'data': stage2_results, 'metadata': {'label_to_model': label_to_model, 'aggregate_rankings': aggregate_rankings}})}\n\n"
+            yield f"data: {json.dumps({'type': 'stage2_complete', 'data': stage2_results, 'metadata': {'label_to_model': label_to_model, 'aggregate_rankings': aggregate_rankings}, 'errors': stage2_errors})}\n\n"
+            
+            # If we have errors, send them to frontend
+            if stage2_errors:
+                yield f"data: {json.dumps({'type': 'model_errors', 'errors': stage2_errors, 'stage': 2})}\n\n"
 
             # Stage 3: Synthesize final answer
             yield f"data: {json.dumps({'type': 'stage3_start'})}\n\n"
@@ -179,12 +198,12 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                 stage3_result
             )
 
-            # Send completion event
-            yield f"data: {json.dumps({'type': 'complete'})}\n\n"
+            # Send completion event with summary of any errors
+            yield f"data: {json.dumps({'type': 'complete', 'errors': all_errors})}\n\n"
 
         except Exception as e:
             # Send error event
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e), 'status': 500, 'title': 'Server Error', 'icon': '🔧'})}\n\n"
 
     return StreamingResponse(
         event_generator(),

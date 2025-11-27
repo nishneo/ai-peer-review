@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
-import { api } from './api';
+import { api, ApiError } from './api';
 import './App.css';
 
 function App() {
@@ -9,6 +9,7 @@ function App() {
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [currentConversation, setCurrentConversation] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // Load conversations on mount
   useEffect(() => {
@@ -26,8 +27,11 @@ function App() {
     try {
       const convs = await api.listConversations();
       setConversations(convs);
-    } catch (error) {
-      console.error('Failed to load conversations:', error);
+    } catch (err) {
+      console.error('Failed to load conversations:', err);
+      if (err instanceof ApiError) {
+        setError(err);
+      }
     }
   };
 
@@ -35,22 +39,33 @@ function App() {
     try {
       const conv = await api.getConversation(id);
       setCurrentConversation(conv);
-    } catch (error) {
-      console.error('Failed to load conversation:', error);
+    } catch (err) {
+      console.error('Failed to load conversation:', err);
+      if (err instanceof ApiError) {
+        setError(err);
+      }
     }
   };
 
   const handleNewConversation = async () => {
     try {
+      setError(null);
       const newConv = await api.createConversation();
       setConversations([
         { id: newConv.id, created_at: newConv.created_at, message_count: 0 },
         ...conversations,
       ]);
       setCurrentConversationId(newConv.id);
-    } catch (error) {
-      console.error('Failed to create conversation:', error);
+    } catch (err) {
+      console.error('Failed to create conversation:', err);
+      if (err instanceof ApiError) {
+        setError(err);
+      }
     }
+  };
+
+  const handleDismissError = () => {
+    setError(null);
   };
 
   const handleSelectConversation = (id) => {
@@ -61,6 +76,8 @@ function App() {
     if (!currentConversationId) return;
 
     setIsLoading(true);
+    setError(null);
+    
     try {
       // Optimistically add user message to UI
       const userMessage = { role: 'user', content };
@@ -161,8 +178,46 @@ function App() {
             setIsLoading(false);
             break;
 
+          case 'model_errors':
+            // Handle individual model errors (e.g., 429 rate limits)
+            if (event.errors && event.errors.length > 0) {
+              const firstError = event.errors[0];
+              const modelError = new ApiError(
+                firstError.status_code || 500,
+                'Model Error',
+                `${firstError.model}: ${firstError.message}`
+              );
+              
+              // Set appropriate title and icon based on status code
+              if (firstError.status_code === 429) {
+                modelError.title = 'Rate Limit Exceeded';
+                modelError.icon = '🚦';
+                modelError.message = `Some models hit rate limits (${event.errors.length} failed). Results may be incomplete.`;
+              } else if (firstError.status_code === 402) {
+                modelError.title = 'Payment Required';
+                modelError.icon = '💳';
+                modelError.message = 'Insufficient credits for some models. Check your OpenRouter balance.';
+              } else {
+                modelError.title = `Stage ${event.stage} Partial Failure`;
+                modelError.icon = '⚠️';
+                modelError.message = `${event.errors.length} model(s) failed. Results may be incomplete.`;
+              }
+              
+              setError(modelError);
+            }
+            break;
+
           case 'error':
             console.error('Stream error:', event.message);
+            // Create an error object for stream errors
+            const streamError = new ApiError(
+              event.status || 500,
+              'Stream Error',
+              event.message || 'An error occurred during processing'
+            );
+            streamError.title = event.title || 'Processing Error';
+            streamError.icon = event.icon || '⚠️';
+            setError(streamError);
             setIsLoading(false);
             break;
 
@@ -170,13 +225,31 @@ function App() {
             console.log('Unknown event type:', eventType);
         }
       });
-    } catch (error) {
-      console.error('Failed to send message:', error);
+    } catch (err) {
+      console.error('Failed to send message:', err);
       // Remove optimistic messages on error
       setCurrentConversation((prev) => ({
         ...prev,
         messages: prev.messages.slice(0, -2),
       }));
+      
+      // Set appropriate error
+      if (err instanceof ApiError) {
+        setError(err);
+      } else if (err.name === 'TypeError' && err.message.includes('fetch')) {
+        // Network error
+        const networkError = new ApiError(0, 'Network Error', 'Unable to connect to the server. Please check your connection.');
+        networkError.title = 'Connection Error';
+        networkError.icon = '📡';
+        setError(networkError);
+      } else {
+        // Generic error
+        const genericError = new ApiError(500, 'Error', err.message || 'An unexpected error occurred');
+        genericError.title = 'Error';
+        genericError.icon = '❌';
+        setError(genericError);
+      }
+      
       setIsLoading(false);
     }
   };
@@ -193,6 +266,8 @@ function App() {
         conversation={currentConversation}
         onSendMessage={handleSendMessage}
         isLoading={isLoading}
+        error={error}
+        onDismissError={handleDismissError}
       />
     </div>
   );

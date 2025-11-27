@@ -11,6 +11,8 @@ wheels/
 
 # Keys and secrets
 .env
+.env.*
+frontend/.env.*
 
 # Data files
 data/
@@ -19,3 +21,11 @@ data/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+
+# macOS system files
+.DS_Store
+**/.DS_Store
+
+# Firebase
+.firebase/
+.firebaserc

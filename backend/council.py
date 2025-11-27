@@ -1,11 +1,11 @@
 """3-stage AI Peer Review orchestration."""
 
 from typing import List, Dict, Any, Tuple
-from .openrouter import query_models_parallel, query_model
+from .openrouter import query_models_parallel, query_model, ModelError
 from .config import COUNCIL_MODELS, CHAIRMAN_MODEL
 
 
-async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
+async def stage1_collect_responses(user_query: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """
     Stage 1: Collect individual responses from all council models.
 
@@ -13,12 +13,12 @@ async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
         user_query: The user's question
 
     Returns:
-        List of dicts with 'model' and 'response' keys
+        Tuple of (results list, errors list)
     """
     messages = [{"role": "user", "content": user_query}]
 
     # Query all models in parallel
-    responses = await query_models_parallel(COUNCIL_MODELS, messages)
+    responses, errors = await query_models_parallel(COUNCIL_MODELS, messages)
 
     # Format results
     stage1_results = []
@@ -29,13 +29,16 @@ async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
                 "response": response.get('content', '')
             })
 
-    return stage1_results
+    # Format errors
+    stage1_errors = [e.to_dict() for e in errors]
+
+    return stage1_results, stage1_errors
 
 
 async def stage2_collect_rankings(
     user_query: str,
     stage1_results: List[Dict[str, Any]]
-) -> Tuple[List[Dict[str, Any]], Dict[str, str]]:
+) -> Tuple[List[Dict[str, Any]], Dict[str, str], List[Dict[str, Any]]]:
     """
     Stage 2: Each model ranks the anonymized responses.
 
@@ -44,7 +47,7 @@ async def stage2_collect_rankings(
         stage1_results: Results from Stage 1
 
     Returns:
-        Tuple of (rankings list, label_to_model mapping)
+        Tuple of (rankings list, label_to_model mapping, errors list)
     """
     # Create anonymized labels for responses (Response A, Response B, etc.)
     labels = [chr(65 + i) for i in range(len(stage1_results))]  # A, B, C, ...
@@ -95,7 +98,7 @@ Now provide your evaluation and ranking:"""
     messages = [{"role": "user", "content": ranking_prompt}]
 
     # Get rankings from all council models in parallel
-    responses = await query_models_parallel(COUNCIL_MODELS, messages)
+    responses, errors = await query_models_parallel(COUNCIL_MODELS, messages)
 
     # Format results
     stage2_results = []
@@ -109,7 +112,10 @@ Now provide your evaluation and ranking:"""
                 "parsed_ranking": parsed
             })
 
-    return stage2_results, label_to_model
+    # Format errors
+    stage2_errors = [e.to_dict() for e in errors]
+
+    return stage2_results, label_to_model, stage2_errors
 
 
 async def stage3_synthesize_final(
@@ -274,8 +280,8 @@ Title:"""
 
     messages = [{"role": "user", "content": title_prompt}]
 
-    # Use gemini-2.5-flash for title generation (fast and cheap)
-    response = await query_model("google/gemini-2.5-flash", messages, timeout=30.0)
+    # Use grok for title generation (free tier)
+    response = await query_model("x-ai/grok-4.1-fast:free", messages, timeout=30.0)
 
     if response is None:
         # Fallback to a generic title
@@ -303,18 +309,22 @@ async def run_full_council(user_query: str) -> Tuple[List, List, Dict, Dict]:
     Returns:
         Tuple of (stage1_results, stage2_results, stage3_result, metadata)
     """
+    all_errors = []
+    
     # Stage 1: Collect individual responses
-    stage1_results = await stage1_collect_responses(user_query)
+    stage1_results, stage1_errors = await stage1_collect_responses(user_query)
+    all_errors.extend(stage1_errors)
 
     # If no models responded successfully, return error
     if not stage1_results:
         return [], [], {
             "model": "error",
             "response": "All models failed to respond. Please try again."
-        }, {}
+        }, {"errors": all_errors}
 
     # Stage 2: Collect rankings
-    stage2_results, label_to_model = await stage2_collect_rankings(user_query, stage1_results)
+    stage2_results, label_to_model, stage2_errors = await stage2_collect_rankings(user_query, stage1_results)
+    all_errors.extend(stage2_errors)
 
     # Calculate aggregate rankings
     aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
@@ -329,7 +339,8 @@ async def run_full_council(user_query: str) -> Tuple[List, List, Dict, Dict]:
     # Prepare metadata
     metadata = {
         "label_to_model": label_to_model,
-        "aggregate_rankings": aggregate_rankings
+        "aggregate_rankings": aggregate_rankings,
+        "errors": all_errors
     }
 
     return stage1_results, stage2_results, stage3_result, metadata

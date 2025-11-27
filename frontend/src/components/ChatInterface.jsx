@@ -9,6 +9,8 @@ export default function ChatInterface({
   conversation,
   onSendMessage,
   isLoading,
+  error,
+  onDismissError,
 }) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
@@ -65,6 +67,27 @@ export default function ChatInterface({
 
   return (
     <div className="chat-interface">
+      {/* Error Banner */}
+      {error && (
+        <div className={`error-banner error-${error.status === 429 ? 'warning' : error.status >= 500 ? 'server' : 'default'}`}>
+          <div className="error-content">
+            <span className="error-icon">{error.icon || '⚠️'}</span>
+            <div className="error-text">
+              <strong className="error-title">{error.title || 'Error'}</strong>
+              <span className="error-message">{error.message}</span>
+              {error.retryAfter && (
+                <span className="error-retry">
+                  Try again in {error.retryAfter} seconds
+                </span>
+              )}
+            </div>
+          </div>
+          <button className="error-dismiss" onClick={onDismissError} aria-label="Dismiss error">
+            ✕
+          </button>
+        </div>
+      )}
+
       <div className="messages-container">
         {conversation.messages.length === 0 ? (
           <div className="empty-state">

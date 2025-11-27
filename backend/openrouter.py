@@ -1,15 +1,30 @@
 """OpenRouter API client for making LLM requests."""
 
 import httpx
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from .config import OPENROUTER_API_KEY, OPENROUTER_API_URL
+
+
+class ModelError:
+    """Represents an error from a model query."""
+    def __init__(self, model: str, status_code: int, message: str):
+        self.model = model
+        self.status_code = status_code
+        self.message = message
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'model': self.model,
+            'status_code': self.status_code,
+            'message': self.message
+        }
 
 
 async def query_model(
     model: str,
     messages: List[Dict[str, str]],
     timeout: float = 120.0
-) -> Optional[Dict[str, Any]]:
+) -> Tuple[Optional[Dict[str, Any]], Optional[ModelError]]:
     """
     Query a single model via OpenRouter API.
 
@@ -19,7 +34,7 @@ async def query_model(
         timeout: Request timeout in seconds
 
     Returns:
-        Response dict with 'content' and optional 'reasoning_details', or None if failed
+        Tuple of (response dict, error). One will be None.
     """
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
@@ -46,17 +61,36 @@ async def query_model(
             return {
                 'content': message.get('content'),
                 'reasoning_details': message.get('reasoning_details')
-            }
+            }, None
 
+    except httpx.HTTPStatusError as e:
+        status_code = e.response.status_code
+        error_message = str(e)
+        
+        # Try to get more details from response body
+        try:
+            error_data = e.response.json()
+            if 'error' in error_data:
+                error_message = error_data['error'].get('message', str(e))
+        except:
+            pass
+        
+        print(f"Error querying model {model}: {e}")
+        return None, ModelError(model, status_code, error_message)
+    
+    except httpx.TimeoutException as e:
+        print(f"Timeout querying model {model}: {e}")
+        return None, ModelError(model, 408, f"Request timed out after {timeout}s")
+    
     except Exception as e:
         print(f"Error querying model {model}: {e}")
-        return None
+        return None, ModelError(model, 500, str(e))
 
 
 async def query_models_parallel(
     models: List[str],
     messages: List[Dict[str, str]]
-) -> Dict[str, Optional[Dict[str, Any]]]:
+) -> Tuple[Dict[str, Optional[Dict[str, Any]]], List[ModelError]]:
     """
     Query multiple models in parallel.
 
@@ -65,7 +99,7 @@ async def query_models_parallel(
         messages: List of message dicts to send to each model
 
     Returns:
-        Dict mapping model identifier to response dict (or None if failed)
+        Tuple of (responses dict, list of errors)
     """
     import asyncio
 
@@ -73,7 +107,15 @@ async def query_models_parallel(
     tasks = [query_model(model, messages) for model in models]
 
     # Wait for all to complete
-    responses = await asyncio.gather(*tasks)
+    results = await asyncio.gather(*tasks)
 
-    # Map models to their responses
-    return {model: response for model, response in zip(models, responses)}
+    # Separate responses and errors
+    responses = {}
+    errors = []
+    
+    for model, (response, error) in zip(models, results):
+        responses[model] = response
+        if error:
+            errors.append(error)
+
+    return responses, errors
