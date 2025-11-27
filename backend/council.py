@@ -165,9 +165,9 @@ Provide a clear, well-reasoned final answer that represents the panel's collecti
     messages = [{"role": "user", "content": chairman_prompt}]
 
     # Query the chairman model
-    response = await query_model(CHAIRMAN_MODEL, messages)
+    response, error = await query_model(CHAIRMAN_MODEL, messages)
 
-    if response is None:
+    if response is None or error is not None:
         # Fallback if chairman fails
         return {
             "model": CHAIRMAN_MODEL,
@@ -281,9 +281,9 @@ Title:"""
     messages = [{"role": "user", "content": title_prompt}]
 
     # Use grok for title generation (free tier)
-    response = await query_model("x-ai/grok-4.1-fast:free", messages, timeout=30.0)
+    response, error = await query_model("x-ai/grok-4.1-fast:free", messages, timeout=30.0)
 
-    if response is None:
+    if response is None or error is not None:
         # Fallback to a generic title
         return "New Conversation"
 

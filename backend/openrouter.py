@@ -1,4 +1,4 @@
-"""OpenRouter API client for making LLM requests."""
+"""Multi-provider API client for making LLM requests."""
 
 import httpx
 from typing import List, Dict, Any, Optional, Tuple
@@ -20,13 +20,65 @@ class ModelError:
         }
 
 
+def get_provider(model: str) -> str:
+    """
+    Determine the provider based on model identifier prefix.
+    
+    Args:
+        model: Model identifier (e.g., "perplexity/sonar", "gemini/gemini-2.0-flash")
+    
+    Returns:
+        Provider name: "perplexity", "gemini", or "openrouter"
+    """
+    if model.startswith("perplexity/"):
+        return "perplexity"
+    elif model.startswith("gemini/"):
+        return "gemini"
+    else:
+        return "openrouter"
+
+
 async def query_model(
     model: str,
     messages: List[Dict[str, str]],
     timeout: float = 120.0
 ) -> Tuple[Optional[Dict[str, Any]], Optional[ModelError]]:
     """
-    Query a single model via OpenRouter API.
+    Query a model via the appropriate provider API.
+
+    Args:
+        model: Model identifier with optional provider prefix
+               - "perplexity/sonar" -> Perplexity API
+               - "gemini/gemini-2.0-flash" -> Google Gemini API
+               - "x-ai/grok-4.1-fast:free" -> OpenRouter API (default)
+        messages: List of message dicts with 'role' and 'content'
+        timeout: Request timeout in seconds
+
+    Returns:
+        Tuple of (response dict, error). One will be None.
+    """
+    provider = get_provider(model)
+    
+    # Route to appropriate provider
+    if provider == "perplexity":
+        from .perplexity import query_perplexity_model
+        return await query_perplexity_model(model, messages, timeout)
+    
+    elif provider == "gemini":
+        from .gemini import query_gemini_model
+        return await query_gemini_model(model, messages, timeout)
+    
+    # Default: OpenRouter
+    return await _query_openrouter_model(model, messages, timeout)
+
+
+async def _query_openrouter_model(
+    model: str,
+    messages: List[Dict[str, str]],
+    timeout: float = 120.0
+) -> Tuple[Optional[Dict[str, Any]], Optional[ModelError]]:
+    """
+    Query a model via OpenRouter API.
 
     Args:
         model: OpenRouter model identifier (e.g., "openai/gpt-4o")
