@@ -365,12 +365,15 @@
     padding: 16px;
     flex-direction: column;
     gap: 12px;
+    align-items: stretch;
   }
 
   .message-input {
-    min-height: 60px;
+    width: 100%;
+    min-height: 80px;
     padding: 12px 14px;
     font-size: 16px; /* Prevents zoom on iOS */
+    box-sizing: border-box;
   }
 
   .send-button {
