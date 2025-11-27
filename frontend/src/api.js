@@ -203,14 +203,47 @@ export const api = {
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
+    
+    // Buffer to accumulate incomplete data across chunks
+    let buffer = '';
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
-      const chunk = decoder.decode(value);
-      const lines = chunk.split('\n');
-
+      // Append new chunk to buffer
+      buffer += decoder.decode(value, { stream: true });
+      
+      // Process complete SSE events (events are separated by double newlines)
+      // Split on \n\n to get complete events
+      const events = buffer.split('\n\n');
+      
+      // Keep the last part in buffer (it might be incomplete)
+      buffer = events.pop() || '';
+      
+      for (const eventBlock of events) {
+        // Skip empty blocks
+        if (!eventBlock.trim()) continue;
+        
+        // Process each line in the event block
+        const lines = eventBlock.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            try {
+              const event = JSON.parse(data);
+              onEvent(event.type, event);
+            } catch (e) {
+              console.error('Failed to parse SSE event:', e, 'Data:', data.substring(0, 200));
+            }
+          }
+        }
+      }
+    }
+    
+    // Process any remaining data in buffer after stream ends
+    if (buffer.trim()) {
+      const lines = buffer.split('\n');
       for (const line of lines) {
         if (line.startsWith('data: ')) {
           const data = line.slice(6);
@@ -218,7 +251,7 @@ export const api = {
             const event = JSON.parse(data);
             onEvent(event.type, event);
           } catch (e) {
-            console.error('Failed to parse SSE event:', e);
+            console.error('Failed to parse final SSE event:', e);
           }
         }
       }
