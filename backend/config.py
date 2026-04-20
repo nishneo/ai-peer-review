@@ -9,20 +9,21 @@ load_dotenv()
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
 # Council members - list of model identifiers from multiple providers
 # Prefix convention:
-#   - "perplexity/" for Perplexity models (e.g., "perplexity/sonar")
-#   - "gemini/" for Google Gemini models (e.g., "gemini/gemini-2.0-flash")
-#   - No prefix or other format for OpenRouter models (e.g., "x-ai/grok-4.1-fast:free")
+#   - "gemini/" for Google Gemini models (e.g., "gemini/gemini-2.5-flash")
+#   - "github/" for GitHub Models (e.g., "github/openai/gpt-4o-mini")
+#   - No prefix for OpenRouter models (e.g., "openai/gpt-oss-120b:free")
 COUNCIL_MODELS = [
-    "x-ai/grok-4.1-fast:free",      # OpenRouter (free)
-    "perplexity/sonar",              # Perplexity direct API
-    "gemini/gemini-2.0-flash",       # Google Gemini direct API
+    "openai/gpt-oss-120b:free",                  # OpenRouter (free)
+    "gemini/gemini-2.5-flash",                   # Google Gemini (free tier)
+    "github/openai/gpt-4o-mini",                 # GitHub Models (free)
 ]
 
 # Chairman model - synthesizes final response
-CHAIRMAN_MODEL = "perplexity/sonar"
+CHAIRMAN_MODEL = "github/openai/gpt-4o"
 
 # OpenRouter API endpoint
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"

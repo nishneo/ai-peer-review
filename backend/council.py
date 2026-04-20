@@ -275,8 +275,8 @@ Title:"""
 
     messages = [{"role": "user", "content": title_prompt}]
 
-    # Use grok for title generation (free tier)
-    response, error = await query_model("x-ai/grok-4.1-fast:free", messages, timeout=30.0)
+    # Use a fast free model for title generation
+    response, error = await query_model("github/openai/gpt-4o-mini", messages, timeout=30.0)
 
     if response is None or error is not None:
         # Fallback to a generic title

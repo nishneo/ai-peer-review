@@ -30,10 +30,10 @@ def get_provider(model: str) -> str:
     Returns:
         Provider name: "perplexity", "gemini", or "openrouter"
     """
-    if model.startswith("perplexity/"):
-        return "perplexity"
-    elif model.startswith("gemini/"):
+    if model.startswith("gemini/"):
         return "gemini"
+    elif model.startswith("github/"):
+        return "github"
     else:
         return "openrouter"
 
@@ -60,14 +60,14 @@ async def query_model(
     provider = get_provider(model)
     
     # Route to appropriate provider
-    if provider == "perplexity":
-        from .perplexity import query_perplexity_model
-        return await query_perplexity_model(model, messages, timeout)
-    
-    elif provider == "gemini":
+    if provider == "gemini":
         from .gemini import query_gemini_model
         return await query_gemini_model(model, messages, timeout)
-    
+
+    elif provider == "github":
+        from .github_models import query_github_model
+        return await query_github_model(model, messages, timeout)
+
     # Default: OpenRouter
     return await _query_openrouter_model(model, messages, timeout)
 
